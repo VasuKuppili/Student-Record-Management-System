@@ -67,4 +67,4 @@ If you ran the seed script, you can log in with:
 - **Password**: `admin123`
 
 ---
-Built with ❤️ for simple and efficient record management.
+Built with ❤️ by **Abhi Ram** for simple and efficient record management.
