@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="View All Students - Student Record Management System">
+    <title>View Students — Student Records</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+</head>
+<body>
+    <div class="app-layout" id="app">
+        <div class="main-content" id="main-content">
+            <div class="page-content">
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="search-input" placeholder="Search by name or student ID...">
+                    </div>
+                    <select class="filter-select" id="filter-class">
+                        <option value="">All Classes</option>
+                    </select>
+                    <select class="filter-select" id="filter-section">
+                        <option value="">All Sections</option>
+                    </select>
+                    <button class="btn btn-success btn-sm" onclick="exportStudents()">📥 Export CSV</button>
+                    <a href="/add-student.html" class="btn btn-primary btn-sm">➕ Add Student</a>
+                </div>
+
+                <!-- Students Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>👥 All Students</h2>
+                        <span class="text-muted" id="total-count">0 students</span>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Class</th>
+                                    <th>Section</th>
+                                    <th>Gender</th>
+                                    <th>Contact</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="students-tbody">
+                                <tr>
+                                    <td colspan="6">
+                                        <div class="loading-state">
+                                            <div class="loading-spinner"></div>
+                                            <p>Loading students...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination" id="pagination"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete confirmation modal -->
+    <div class="modal-overlay" id="delete-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>⚠️ Confirm Delete</h3>
+                <button class="modal-close" onclick="hideModal('delete-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="delete-student-name"></strong>? This action cannot be undone and will also delete all associated marks.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('delete-modal')">Cancel</button>
+                <button class="btn btn-danger" id="confirm-delete-btn" onclick="confirmDelete()">🗑️ Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        let currentPage = 1;
+        let currentSearch = '';
+        let currentClass = '';
+        let currentSection = '';
+        let deleteStudentId = null;
+
+        (async () => {
+            document.getElementById('app').insertAdjacentHTML('afterbegin', getSidebarHTML());
+            document.getElementById('main-content').insertAdjacentHTML('afterbegin', getHeaderHTML('View Students', 'Students > <span>View All</span>'));
+
+            const user = await setupPage('view-students');
+            if (!user) return;
+
+            // Load class filter
+            const classData = await apiRequest('/classes');
+            if (classData && classData.success) {
+                const classSelect = document.getElementById('filter-class');
+                classData.data.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c._id;
+                    opt.textContent = c.name;
+                    classSelect.appendChild(opt);
+                });
+            }
+
+            // Event listeners
+            document.getElementById('search-input').addEventListener('input', debounce((e) => {
+                currentSearch = e.target.value.trim();
+                currentPage = 1;
+                loadStudents();
+            }, 400));
+
+            document.getElementById('filter-class').addEventListener('change', async (e) => {
+                currentClass = e.target.value;
+                currentSection = '';
+                currentPage = 1;
+
+                // Load sections for selected class
+                const secSelect = document.getElementById('filter-section');
+                secSelect.innerHTML = '<option value="">All Sections</option>';
+                if (currentClass) {
+                    const secData = await apiRequest(`/sections?classId=${currentClass}`);
+                    if (secData && secData.success) {
+                        secData.data.forEach(s => {
+                            const opt = document.createElement('option');
+                            opt.value = s._id;
+                            opt.textContent = s.name;
+                            secSelect.appendChild(opt);
+                        });
+                    }
+                }
+                loadStudents();
+            });
+
+            document.getElementById('filter-section').addEventListener('change', (e) => {
+                currentSection = e.target.value;
+                currentPage = 1;
+                loadStudents();
+            });
+
+            loadStudents();
+        })();
+
+        async function loadStudents() {
+            const tbody = document.getElementById('students-tbody');
+            tbody.innerHTML = `<tr><td colspan="6"><div class="loading-state"><div class="loading-spinner"></div><p>Loading...</p></div></td></tr>`;
+
+            let url = `/students?page=${currentPage}&limit=10`;
+            if (currentSearch) url += `&search=${encodeURIComponent(currentSearch)}`;
+            if (currentClass) url += `&classId=${currentClass}`;
+            if (currentSection) url += `&sectionId=${currentSection}`;
+
+            const data = await apiRequest(url);
+            if (!data || !data.success) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger" style="padding: 40px;">Failed to load students</td></tr>`;
+                return;
+            }
+
+            const students = data.data;
+            const pagination = data.pagination;
+
+            document.getElementById('total-count').textContent = `${pagination.total} student${pagination.total !== 1 ? 's' : ''}`;
+
+            if (students.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="6">
+                        <div class="empty-state">
+                            <div class="empty-icon">📚</div>
+                            <h3>No Students Found</h3>
+                            <p>Try adjusting your search or filters</p>
+                            <a href="/add-student.html" class="btn btn-primary btn-sm">➕ Add First Student</a>
+                        </div>
+                    </td></tr>`;
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+
+            tbody.innerHTML = students.map(s => {
+                const genderBadge = s.gender === 'Male' ? 'badge-blue' : s.gender === 'Female' ? 'badge-green' : 'badge-orange';
+                return `
+                <tr>
+                    <td>
+                        <div class="student-name">${s.name}</div>
+                        <div class="student-id">${s.studentId}</div>
+                    </td>
+                    <td>${s.classId?.name || 'N/A'}</td>
+                    <td><span class="badge badge-purple">${s.sectionId?.name || 'N/A'}</span></td>
+                    <td><span class="badge ${genderBadge}">${s.gender}</span></td>
+                    <td>${s.contactNumber}</td>
+                    <td>
+                        <div class="actions-cell">
+                            <a href="/student-profile.html?id=${s._id}" class="btn btn-sm btn-secondary" title="View Profile">👁️</a>
+                            <a href="/edit-student.html?id=${s._id}" class="btn btn-sm btn-secondary" title="Edit">✏️</a>
+                            <button class="btn btn-sm btn-danger" title="Delete" onclick="deleteStudent('${s._id}', '${s.name.replace(/'/g, "\\'")}')">🗑️</button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            // Pagination
+            renderPagination(pagination);
+        }
+
+        function renderPagination(p) {
+            const container = document.getElementById('pagination');
+            if (p.pages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = `<button class="page-btn" onclick="goToPage(${p.current - 1})" ${p.current <= 1 ? 'disabled' : ''}>◀</button>`;
+
+            for (let i = 1; i <= p.pages; i++) {
+                if (i === 1 || i === p.pages || (i >= p.current - 2 && i <= p.current + 2)) {
+                    html += `<button class="page-btn ${i === p.current ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+                } else if (i === p.current - 3 || i === p.current + 3) {
+                    html += `<span class="page-info">…</span>`;
+                }
+            }
+
+            html += `<button class="page-btn" onclick="goToPage(${p.current + 1})" ${p.current >= p.pages ? 'disabled' : ''}>▶</button>`;
+
+            container.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            loadStudents();
+        }
+
+        function deleteStudent(id, name) {
+            deleteStudentId = id;
+            document.getElementById('delete-student-name').textContent = name;
+            showModal('delete-modal');
+        }
+
+        async function confirmDelete() {
+            if (!deleteStudentId) return;
+
+            const btn = document.getElementById('confirm-delete-btn');
+            btn.disabled = true;
+            btn.textContent = 'Deleting...';
+
+            const data = await apiRequest(`/students/${deleteStudentId}`, { method: 'DELETE' });
+            if (data && data.success) {
+                showToast('success', 'Deleted', 'Student deleted successfully');
+                hideModal('delete-modal');
+                loadStudents();
+            } else {
+                showToast('error', 'Failed', data?.message || 'Could not delete student');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '🗑️ Delete';
+            deleteStudentId = null;
+        }
+
+        async function exportStudents() {
+            const data = await apiRequest('/students/all');
+            if (data && data.success && data.data.length > 0) {
+                const exportData = data.data.map(s => ({
+                    'Student ID': s.studentId,
+                    'Name': s.name,
+                    'Class': s.classId?.name || '',
+                    'Section': s.sectionId?.name || '',
+                    'Gender': s.gender,
+                    'DOB': formatDate(s.dateOfBirth),
+                    'Parent': s.parentName,
+                    'Contact': s.contactNumber,
+                    'Email': s.email || '',
+                    'Address': s.address
+                }));
+                exportToCSV(exportData, 'students');
+            } else {
+                showToast('warning', 'No Data', 'No students to export');
+            }
+        }
+    </script>
+</body>
+</html>

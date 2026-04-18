@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Student Record Management System - Login">
+    <title>Login — Student Record Management System</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="login-logo">
+                    <div class="logo-icon">🎓</div>
+                    <h1>Student Records</h1>
+                    <p>Management System</p>
+                </div>
+
+                <!-- Sign In Form -->
+                <form id="login-form" autocomplete="on">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" class="form-control"
+                               placeholder="Username" required autocomplete="username">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" class="form-control"
+                               placeholder="Password" required autocomplete="current-password">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block" id="login-btn">
+                        <span id="login-text">Sign In</span>
+                        <div class="spinner hidden" id="login-spinner"></div>
+                    </button>
+                </form>
+
+                <!-- Sign Up Form -->
+                <form id="signup-form" class="hidden" autocomplete="on">
+                    <div class="form-group">
+                        <label for="signup-fullname">Full Name</label>
+                        <input type="text" id="signup-fullname" name="fullname" class="form-control"
+                               placeholder="Full Name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signup-username">Username</label>
+                        <input type="text" id="signup-username" name="username" class="form-control"
+                               placeholder="Username (min 3 chars)" required autocomplete="username">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" id="signup-password" name="password" class="form-control"
+                               placeholder="Password (min 6 chars)" required autocomplete="new-password">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block" id="signup-btn">
+                        <span id="signup-text">Create Account</span>
+                        <div class="spinner hidden" id="signup-spinner"></div>
+                    </button>
+                </form>
+
+                <div class="auth-toggle" id="auth-toggle">
+                    Don't have an account? <a id="toggle-link" onclick="toggleAuthForm()">Sign Up</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        // Check if already logged in
+        (async () => {
+            try {
+                const res = await fetch('/api/auth/check', { credentials: 'include' });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = '/dashboard.html';
+                }
+            } catch {}
+        })();
+
+        let isSignUp = false;
+
+        function toggleAuthForm() {
+            isSignUp = !isSignUp;
+            document.getElementById('login-form').classList.toggle('hidden', isSignUp);
+            document.getElementById('signup-form').classList.toggle('hidden', !isSignUp);
+
+            const toggle = document.getElementById('auth-toggle');
+            if (isSignUp) {
+                toggle.innerHTML = 'Already have an account? <a onclick="toggleAuthForm()">Sign In</a>';
+            } else {
+                toggle.innerHTML = 'Don\'t have an account? <a onclick="toggleAuthForm()">Sign Up</a>';
+            }
+        }
+
+        // Sign In
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                showToast('warning', 'Missing Fields', 'Enter username and password');
+                return;
+            }
+
+            const btn = document.getElementById('login-btn');
+            const text = document.getElementById('login-text');
+            const spinner = document.getElementById('login-spinner');
+            btn.disabled = true;
+            text.textContent = 'Signing in...';
+            spinner.classList.remove('hidden');
+
+            try {
+                const data = await apiRequest('/auth/login', {
+                    method: 'POST',
+                    body: { username, password }
+                });
+
+                if (data && data.success) {
+                    showToast('success', 'Welcome', `Logged in as ${data.user.fullName}`);
+                    setTimeout(() => { window.location.href = '/dashboard.html'; }, 600);
+                } else {
+                    showToast('error', 'Failed', data?.message || 'Invalid credentials');
+                    btn.disabled = false;
+                    text.textContent = 'Sign In';
+                    spinner.classList.add('hidden');
+                }
+            } catch {
+                btn.disabled = false;
+                text.textContent = 'Sign In';
+                spinner.classList.add('hidden');
+            }
+        });
+
+        // Sign Up
+        document.getElementById('signup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fullName = document.getElementById('signup-fullname').value.trim();
+            const username = document.getElementById('signup-username').value.trim();
+            const password = document.getElementById('signup-password').value;
+
+            if (!fullName || !username || !password) {
+                showToast('warning', 'Missing Fields', 'All fields are required');
+                return;
+            }
+
+            const btn = document.getElementById('signup-btn');
+            const text = document.getElementById('signup-text');
+            const spinner = document.getElementById('signup-spinner');
+            btn.disabled = true;
+            text.textContent = 'Creating...';
+            spinner.classList.remove('hidden');
+
+            try {
+                const data = await apiRequest('/auth/signup', {
+                    method: 'POST',
+                    body: { username, password, fullName }
+                });
+
+                if (data && data.success) {
+                    showToast('success', 'Account Created', 'Redirecting...');
+                    setTimeout(() => { window.location.href = '/dashboard.html'; }, 600);
+                } else {
+                    showToast('error', 'Failed', data?.message || 'Could not create account');
+                    btn.disabled = false;
+                    text.textContent = 'Create Account';
+                    spinner.classList.add('hidden');
+                }
+            } catch {
+                btn.disabled = false;
+                text.textContent = 'Create Account';
+                spinner.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

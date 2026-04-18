@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Manage Classes & Sections - Student Record Management System">
+    <title>Classes & Sections — Student Records</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+</head>
+<body>
+    <div class="app-layout" id="app">
+        <div class="main-content" id="main-content">
+            <div class="page-content">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                    <!-- Classes -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>🏫 Classes</h2>
+                            <button class="btn btn-primary btn-sm" onclick="showModal('add-class-modal')">➕ Add Class</button>
+                        </div>
+
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Class Name</th>
+                                        <th>Description</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="classes-tbody">
+                                    <tr><td colspan="3"><div class="loading-state"><div class="loading-spinner"></div></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Sections -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>📋 Sections</h2>
+                            <button class="btn btn-primary btn-sm" onclick="showAddSectionModal()">➕ Add Section</button>
+                        </div>
+
+                        <div style="margin-bottom: 16px;">
+                            <select class="filter-select" id="section-class-filter" style="width: 100%;">
+                                <option value="">All Classes</option>
+                            </select>
+                        </div>
+
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Section</th>
+                                        <th>Class</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sections-tbody">
+                                    <tr><td colspan="3"><div class="loading-state"><div class="loading-spinner"></div></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Class Modal -->
+    <div class="modal-overlay" id="add-class-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>➕ Add New Class</h3>
+                <button class="modal-close" onclick="hideModal('add-class-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Class Name <span class="required">*</span></label>
+                    <input type="text" id="new-class-name" class="form-control" placeholder="e.g., Class 11">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="new-class-desc" class="form-control" placeholder="e.g., Eleventh Year">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('add-class-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="addClass()">💾 Create Class</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Class Modal -->
+    <div class="modal-overlay" id="edit-class-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>✏️ Edit Class</h3>
+                <button class="modal-close" onclick="hideModal('edit-class-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Class Name <span class="required">*</span></label>
+                    <input type="text" id="edit-class-name" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="edit-class-desc" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('edit-class-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="updateClass()">💾 Update</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Section Modal -->
+    <div class="modal-overlay" id="add-section-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>➕ Add New Section</h3>
+                <button class="modal-close" onclick="hideModal('add-section-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Class <span class="required">*</span></label>
+                    <select id="new-section-class" class="form-control">
+                        <option value="">Select Class</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Section Name <span class="required">*</span></label>
+                    <input type="text" id="new-section-name" class="form-control" placeholder="e.g., D">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('add-section-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="addSection()">💾 Create Section</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Section Modal -->
+    <div class="modal-overlay" id="edit-section-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>✏️ Edit Section</h3>
+                <button class="modal-close" onclick="hideModal('edit-section-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Class <span class="required">*</span></label>
+                    <select id="edit-section-class" class="form-control">
+                        <option value="">Select Class</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Section Name <span class="required">*</span></label>
+                    <input type="text" id="edit-section-name" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('edit-section-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="updateSection()">💾 Update</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="delete-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>⚠️ Confirm Delete</h3>
+                <button class="modal-close" onclick="hideModal('delete-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <p id="delete-message">Are you sure you want to delete this item?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideModal('delete-modal')">Cancel</button>
+                <button class="btn btn-danger" id="confirm-delete-btn">🗑️ Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        let editClassId = null;
+        let editSectionId = null;
+        let classesData = [];
+
+        (async () => {
+            document.getElementById('app').insertAdjacentHTML('afterbegin', getSidebarHTML());
+            document.getElementById('main-content').insertAdjacentHTML('afterbegin', getHeaderHTML('Classes & Sections', 'Academics > <span>Manage</span>'));
+
+            const user = await setupPage('manage-classes');
+            if (!user) return;
+
+            await loadClasses();
+            await loadSections();
+
+            document.getElementById('section-class-filter').addEventListener('change', () => {
+                loadSections();
+            });
+        })();
+
+        // ═══ CLASSES ═══
+        async function loadClasses() {
+            const data = await apiRequest('/classes');
+            if (!data || !data.success) return;
+
+            classesData = data.data;
+            const tbody = document.getElementById('classes-tbody');
+
+            if (classesData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted" style="padding: 30px;">No classes created yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = classesData.map(c => `
+                <tr>
+                    <td style="font-weight: 600; color: var(--text-primary);">${c.name}</td>
+                    <td class="text-muted">${c.description || '—'}</td>
+                    <td>
+                        <div class="actions-cell">
+                            <button class="btn btn-sm btn-secondary" onclick="editClass('${c._id}')">✏️</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteClass('${c._id}', '${c.name.replace(/'/g, "\\'")}')">🗑️</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Update section filter dropdown
+            const filterSelect = document.getElementById('section-class-filter');
+            const currentVal = filterSelect.value;
+            filterSelect.innerHTML = '<option value="">All Classes</option>';
+            classesData.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c._id;
+                opt.textContent = c.name;
+                if (c._id === currentVal) opt.selected = true;
+                filterSelect.appendChild(opt);
+            });
+        }
+
+        async function addClass() {
+            const name = document.getElementById('new-class-name').value.trim();
+            const description = document.getElementById('new-class-desc').value.trim();
+
+            if (!name) {
+                showToast('warning', 'Required', 'Class name is required');
+                return;
+            }
+
+            const data = await apiRequest('/classes', {
+                method: 'POST',
+                body: { name, description }
+            });
+
+            if (data && data.success) {
+                showToast('success', 'Created', `${name} created successfully`);
+                hideModal('add-class-modal');
+                document.getElementById('new-class-name').value = '';
+                document.getElementById('new-class-desc').value = '';
+                await loadClasses();
+            } else {
+                showToast('error', 'Error', data?.message || 'Failed to create class');
+            }
+        }
+
+        function editClass(id) {
+            const cls = classesData.find(c => c._id === id);
+            if (!cls) return;
+
+            editClassId = id;
+            document.getElementById('edit-class-name').value = cls.name;
+            document.getElementById('edit-class-desc').value = cls.description || '';
+            showModal('edit-class-modal');
+        }
+
+        async function updateClass() {
+            if (!editClassId) return;
+
+            const name = document.getElementById('edit-class-name').value.trim();
+            const description = document.getElementById('edit-class-desc').value.trim();
+
+            if (!name) {
+                showToast('warning', 'Required', 'Class name is required');
+                return;
+            }
+
+            const data = await apiRequest(`/classes/${editClassId}`, {
+                method: 'PUT',
+                body: { name, description }
+            });
+
+            if (data && data.success) {
+                showToast('success', 'Updated', 'Class updated successfully');
+                hideModal('edit-class-modal');
+                editClassId = null;
+                await loadClasses();
+            } else {
+                showToast('error', 'Error', data?.message || 'Failed to update class');
+            }
+        }
+
+        function deleteClass(id, name) {
+            document.getElementById('delete-message').textContent = `Are you sure you want to delete "${name}"? All sections in this class will also be deleted.`;
+            const btn = document.getElementById('confirm-delete-btn');
+            btn.onclick = async () => {
+                const data = await apiRequest(`/classes/${id}`, { method: 'DELETE' });
+                if (data && data.success) {
+                    showToast('success', 'Deleted', `${name} deleted successfully`);
+                    hideModal('delete-modal');
+                    await loadClasses();
+                    await loadSections();
+                } else {
+                    showToast('error', 'Error', data?.message || 'Failed to delete class');
+                }
+            };
+            showModal('delete-modal');
+        }
+
+        // ═══ SECTIONS ═══
+        async function loadSections() {
+            const filterClass = document.getElementById('section-class-filter').value;
+            let url = '/sections';
+            if (filterClass) url += `?classId=${filterClass}`;
+
+            const data = await apiRequest(url);
+            if (!data || !data.success) return;
+
+            const tbody = document.getElementById('sections-tbody');
+            const sections = data.data;
+
+            if (sections.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted" style="padding: 30px;">No sections found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = sections.map(s => `
+                <tr>
+                    <td style="font-weight: 600; color: var(--text-primary);">Section ${s.name}</td>
+                    <td><span class="badge badge-purple">${s.classId?.name || 'N/A'}</span></td>
+                    <td>
+                        <div class="actions-cell">
+                            <button class="btn btn-sm btn-secondary" onclick="editSection('${s._id}', '${s.name}', '${s.classId?._id || ''}')">✏️</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteSection('${s._id}', '${s.name}')">🗑️</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showAddSectionModal() {
+            const select = document.getElementById('new-section-class');
+            select.innerHTML = '<option value="">Select Class</option>';
+            classesData.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c._id;
+                opt.textContent = c.name;
+                select.appendChild(opt);
+            });
+            showModal('add-section-modal');
+        }
+
+        async function addSection() {
+            const classId = document.getElementById('new-section-class').value;
+            const name = document.getElementById('new-section-name').value.trim();
+
+            if (!classId || !name) {
+                showToast('warning', 'Required', 'Both class and section name are required');
+                return;
+            }
+
+            const data = await apiRequest('/sections', {
+                method: 'POST',
+                body: { name, classId }
+            });
+
+            if (data && data.success) {
+                showToast('success', 'Created', `Section ${name} created`);
+                hideModal('add-section-modal');
+                document.getElementById('new-section-name').value = '';
+                await loadSections();
+            } else {
+                showToast('error', 'Error', data?.message || 'Failed to create section');
+            }
+        }
+
+        function editSection(id, name, classId) {
+            editSectionId = id;
+            const select = document.getElementById('edit-section-class');
+            select.innerHTML = '<option value="">Select Class</option>';
+            classesData.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c._id;
+                opt.textContent = c.name;
+                if (c._id === classId) opt.selected = true;
+                select.appendChild(opt);
+            });
+            document.getElementById('edit-section-name').value = name;
+            showModal('edit-section-modal');
+        }
+
+        async function updateSection() {
+            if (!editSectionId) return;
+
+            const classId = document.getElementById('edit-section-class').value;
+            const name = document.getElementById('edit-section-name').value.trim();
+
+            if (!classId || !name) {
+                showToast('warning', 'Required', 'Both class and section name are required');
+                return;
+            }
+
+            const data = await apiRequest(`/sections/${editSectionId}`, {
+                method: 'PUT',
+                body: { name, classId }
+            });
+
+            if (data && data.success) {
+                showToast('success', 'Updated', 'Section updated');
+                hideModal('edit-section-modal');
+                editSectionId = null;
+                await loadSections();
+            } else {
+                showToast('error', 'Error', data?.message || 'Failed to update section');
+            }
+        }
+
+        function deleteSection(id, name) {
+            document.getElementById('delete-message').textContent = `Are you sure you want to delete Section "${name}"?`;
+            const btn = document.getElementById('confirm-delete-btn');
+            btn.onclick = async () => {
+                const data = await apiRequest(`/sections/${id}`, { method: 'DELETE' });
+                if (data && data.success) {
+                    showToast('success', 'Deleted', `Section ${name} deleted`);
+                    hideModal('delete-modal');
+                    await loadSections();
+                } else {
+                    showToast('error', 'Error', data?.message || 'Failed to delete section');
+                }
+            };
+            showModal('delete-modal');
+        }
+    </script>
+</body>
+</html>

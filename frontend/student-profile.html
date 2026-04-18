@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Student Profile - Student Record Management System">
+    <title>Student Profile — Student Records</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+</head>
+<body>
+    <div class="app-layout" id="app">
+        <div class="main-content" id="main-content">
+            <div class="page-content">
+                <div class="loading-state" id="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading student profile...</p>
+                </div>
+
+                <div id="profile-content" class="hidden">
+                    <!-- Profile Header -->
+                    <div class="profile-header" id="profile-header">
+                        <div class="profile-avatar" id="profile-avatar">S</div>
+                        <div class="profile-info">
+                            <h2 id="profile-name">Student Name</h2>
+                            <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+                                <span class="badge badge-purple" id="profile-id">ID</span>
+                                <span class="badge badge-blue" id="profile-class">Class</span>
+                                <span class="badge badge-green" id="profile-section">Section</span>
+                            </div>
+                            <div class="profile-meta">
+                                <span id="profile-gender">📋 Gender</span>
+                                <span id="profile-dob">📅 DOB</span>
+                                <span id="profile-email">📧 Email</span>
+                            </div>
+                        </div>
+                        <div style="margin-left: auto; display: flex; gap: 8px;">
+                            <a href="#" class="btn btn-primary btn-sm" id="edit-link">✏️ Edit</a>
+                            <a href="/view-students.html" class="btn btn-secondary btn-sm">← Back</a>
+                        </div>
+                    </div>
+
+                    <!-- Profile Grid -->
+                    <div class="profile-grid">
+                        <!-- Personal Details -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>👤 Personal Details</h3>
+                            </div>
+                            <div class="detail-grid" id="personal-details"></div>
+                        </div>
+
+                        <!-- Academic Details -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>🎓 Academic Details</h3>
+                            </div>
+                            <div id="academic-details"></div>
+                        </div>
+                    </div>
+
+                    <!-- Marks & Performance -->
+                    <div class="card mt-24">
+                        <div class="card-header">
+                            <h2>📊 Academic Performance</h2>
+                        </div>
+
+                        <div class="marks-summary" id="marks-summary" class="hidden"></div>
+
+                        <div class="table-container" id="marks-table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Subject</th>
+                                        <th>Marks Obtained</th>
+                                        <th>Max Marks</th>
+                                        <th>Percentage</th>
+                                        <th>Grade</th>
+                                        <th>Exam Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="marks-tbody">
+                                    <tr><td colspan="6" class="text-center text-muted" style="padding: 40px;">No marks recorded</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        (async () => {
+            document.getElementById('app').insertAdjacentHTML('afterbegin', getSidebarHTML());
+            document.getElementById('main-content').insertAdjacentHTML('afterbegin', getHeaderHTML('Student Profile', 'Students > <span>Profile</span>'));
+
+            const user = await setupPage('view-students');
+            if (!user) return;
+
+            const params = new URLSearchParams(window.location.search);
+            const studentId = params.get('id');
+
+            if (!studentId) {
+                showToast('error', 'Error', 'No student ID provided');
+                setTimeout(() => window.location.href = '/view-students.html', 1500);
+                return;
+            }
+
+            await loadProfile(studentId);
+        })();
+
+        async function loadProfile(id) {
+            const data = await apiRequest(`/students/${id}`);
+            if (!data || !data.success) {
+                showToast('error', 'Error', 'Student not found');
+                setTimeout(() => window.location.href = '/view-students.html', 1500);
+                return;
+            }
+
+            const s = data.data.student;
+            const marks = data.data.marks;
+
+            // Header
+            document.getElementById('profile-avatar').textContent = s.name.charAt(0).toUpperCase();
+            document.getElementById('profile-name').textContent = s.name;
+            document.getElementById('profile-id').textContent = s.studentId;
+            document.getElementById('profile-class').textContent = s.classId?.name || 'N/A';
+            document.getElementById('profile-section').textContent = `Section ${s.sectionId?.name || 'N/A'}`;
+            document.getElementById('profile-gender').textContent = `📋 ${s.gender}`;
+            document.getElementById('profile-dob').textContent = `📅 ${formatDate(s.dateOfBirth)}`;
+            document.getElementById('profile-email').textContent = `📧 ${s.email || 'No email'}`;
+            document.getElementById('edit-link').href = `/edit-student.html?id=${id}`;
+
+            document.title = `${s.name} — Student Profile`;
+
+            // Personal Details
+            document.getElementById('personal-details').innerHTML = `
+                <div class="detail-item">
+                    <div class="detail-label">Full Name</div>
+                    <div class="detail-value">${s.name}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Student ID</div>
+                    <div class="detail-value" style="font-family: var(--font-mono);">${s.studentId}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Gender</div>
+                    <div class="detail-value">${s.gender}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Date of Birth</div>
+                    <div class="detail-value">${formatDate(s.dateOfBirth)}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Parent/Guardian</div>
+                    <div class="detail-value">${s.parentName}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Contact</div>
+                    <div class="detail-value">${s.contactNumber}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Email</div>
+                    <div class="detail-value">${s.email || 'N/A'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Address</div>
+                    <div class="detail-value">${s.address}</div>
+                </div>
+            `;
+
+            // Academic Details
+            const subjectsHtml = (s.subjects && s.subjects.length > 0)
+                ? s.subjects.map(sub => `<span class="subject-tag">${sub}</span>`).join('')
+                : '<span class="text-muted">No subjects assigned</span>';
+
+            document.getElementById('academic-details').innerHTML = `
+                <div class="detail-item">
+                    <div class="detail-label">Class</div>
+                    <div class="detail-value">${s.classId?.name || 'N/A'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Section</div>
+                    <div class="detail-value">${s.sectionId?.name || 'N/A'}</div>
+                </div>
+                <div class="detail-item" style="grid-column: 1 / -1;">
+                    <div class="detail-label">Subjects</div>
+                    <div class="subject-tags" style="margin-top: 8px;">${subjectsHtml}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Enrolled</div>
+                    <div class="detail-value">${formatDate(s.createdAt)}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Last Updated</div>
+                    <div class="detail-value">${formatDate(s.updatedAt)}</div>
+                </div>
+            `;
+
+            // Marks
+            if (marks && marks.length > 0) {
+                let totalObtained = 0, totalMax = 0;
+                marks.forEach(m => {
+                    totalObtained += m.marksObtained;
+                    totalMax += m.maxMarks;
+                });
+
+                const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(1) : 0;
+                const overallGrade = calculateGrade(totalObtained, totalMax);
+
+                document.getElementById('marks-summary').innerHTML = `
+                    <div class="summary-item">
+                        <div class="summary-value">${totalObtained} / ${totalMax}</div>
+                        <div class="summary-label">Total Marks</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value">${percentage}%</div>
+                        <div class="summary-label">Percentage</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value">${overallGrade}</div>
+                        <div class="summary-label">Overall Grade</div>
+                    </div>
+                `;
+                document.getElementById('marks-summary').classList.remove('hidden');
+
+                document.getElementById('marks-tbody').innerHTML = marks.map(m => {
+                    const pct = ((m.marksObtained / m.maxMarks) * 100).toFixed(1);
+                    return `
+                        <tr>
+                            <td style="font-weight: 500; color: var(--text-primary);">${m.subject}</td>
+                            <td>${m.marksObtained}</td>
+                            <td>${m.maxMarks}</td>
+                            <td>${pct}%</td>
+                            <td><span class="grade-badge ${getGradeClass(m.grade)}">${m.grade}</span></td>
+                            <td><span class="badge badge-purple">${m.examType}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('profile-content').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

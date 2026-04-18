@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Student Record Management System - Dashboard">
+    <title>Dashboard — Student Records</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+</head>
+<body>
+    <div class="app-layout" id="app">
+        <!-- Sidebar injected by JS -->
+        <div class="main-content" id="main-content">
+            <!-- Header injected by JS -->
+            <div class="page-content" id="page-content">
+                <div class="loading-state" id="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading dashboard...</p>
+                </div>
+
+                <div id="dashboard-content" class="hidden">
+                    <!-- Stats Cards -->
+                    <div class="stats-grid" id="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon purple">🎓</div>
+                            <div>
+                                <div class="stat-value" id="stat-total">0</div>
+                                <div class="stat-label">Total Students</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon blue">👦</div>
+                            <div>
+                                <div class="stat-value" id="stat-male">0</div>
+                                <div class="stat-label">Male Students</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green">👧</div>
+                            <div>
+                                <div class="stat-value" id="stat-female">0</div>
+                                <div class="stat-label">Female Students</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon orange">📚</div>
+                            <div>
+                                <div class="stat-value" id="stat-classes">0</div>
+                                <div class="stat-label">Total Classes</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card mb-24">
+                        <div class="card-header">
+                            <h2>⚡ Quick Actions</h2>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                            <a href="/add-student.html" class="btn btn-primary btn-lg" style="text-decoration: none;">
+                                ➕ Add New Student
+                            </a>
+                            <a href="/view-students.html" class="btn btn-secondary btn-lg" style="text-decoration: none;">
+                                👥 View All Students
+                            </a>
+                            <a href="/manage-classes.html" class="btn btn-secondary btn-lg" style="text-decoration: none;">
+                                🏫 Manage Classes
+                            </a>
+                            <button class="btn btn-success btn-lg" onclick="exportAllStudents()">
+                                📥 Export CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Class Distribution -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>📊 Class-wise Distribution</h2>
+                        </div>
+                        <div id="class-distribution">
+                            <div class="empty-state">
+                                <p class="text-muted">No data available yet</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Students -->
+                    <div class="card mt-24">
+                        <div class="card-header">
+                            <h2>🕐 Recent Students</h2>
+                            <a href="/view-students.html" class="btn btn-sm btn-secondary">View All →</a>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Class</th>
+                                        <th>Section</th>
+                                        <th>Contact</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-students">
+                                    <tr><td colspan="5" class="text-center text-muted" style="padding: 40px;">No students yet</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        (async () => {
+            // Inject sidebar and header
+            document.getElementById('app').insertAdjacentHTML('afterbegin', getSidebarHTML());
+            document.getElementById('main-content').insertAdjacentHTML('afterbegin', getHeaderHTML('Dashboard', 'Home > <span>Dashboard</span>'));
+
+            const user = await setupPage('dashboard');
+            if (!user) return;
+
+            await loadDashboard();
+        })();
+
+        async function loadDashboard() {
+            try {
+                // Load stats
+                const statsData = await apiRequest('/students/stats');
+                if (statsData && statsData.success) {
+                    const s = statsData.data;
+                    animateCounter('stat-total', s.totalStudents);
+                    animateCounter('stat-male', s.maleStudents);
+                    animateCounter('stat-female', s.femaleStudents);
+
+                    // Class distribution
+                    if (s.classDistribution && s.classDistribution.length > 0) {
+                        const maxCount = Math.max(...s.classDistribution.map(c => c.count));
+                        const distHtml = s.classDistribution.map(c => `
+                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px;">
+                                <span style="width: 100px; font-size: 14px; color: var(--text-secondary); font-weight: 500;">${c._id}</span>
+                                <div style="flex: 1; height: 28px; background: var(--bg-glass); border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color);">
+                                    <div style="height: 100%; width: ${(c.count / maxCount) * 100}%; background: var(--accent-gradient); border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; transition: width 1s ease;">
+                                        <span style="font-size: 12px; font-weight: 700; color: white;">${c.count}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+                        document.getElementById('class-distribution').innerHTML = distHtml;
+                    }
+                }
+
+                // Load classes count
+                const classesData = await apiRequest('/classes');
+                if (classesData && classesData.success) {
+                    animateCounter('stat-classes', classesData.data.length);
+                }
+
+                // Load recent students
+                const studentsData = await apiRequest('/students?limit=5');
+                if (studentsData && studentsData.success && studentsData.data.length > 0) {
+                    const tbody = document.getElementById('recent-students');
+                    tbody.innerHTML = studentsData.data.map(s => `
+                        <tr>
+                            <td>
+                                <div class="student-name">${s.name}</div>
+                                <div class="student-id">${s.studentId}</div>
+                            </td>
+                            <td>${s.classId?.name || 'N/A'}</td>
+                            <td><span class="badge badge-purple">${s.sectionId?.name || 'N/A'}</span></td>
+                            <td>${s.contactNumber}</td>
+                            <td>
+                                <div class="actions-cell">
+                                    <a href="/student-profile.html?id=${s._id}" class="btn btn-sm btn-secondary">View</a>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('dashboard-content').classList.remove('hidden');
+            } catch (error) {
+                console.error('Dashboard error:', error);
+                document.getElementById('loading').innerHTML = '<p class="text-danger">Failed to load dashboard</p>';
+            }
+        }
+
+        function animateCounter(id, target) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            let current = 0;
+            const increment = Math.ceil(target / 30);
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                el.textContent = current;
+            }, 30);
+        }
+
+        async function exportAllStudents() {
+            const data = await apiRequest('/students/all');
+            if (data && data.success && data.data.length > 0) {
+                const exportData = data.data.map(s => ({
+                    'Student ID': s.studentId,
+                    'Name': s.name,
+                    'Class': s.classId?.name || '',
+                    'Section': s.sectionId?.name || '',
+                    'Gender': s.gender,
+                    'DOB': formatDate(s.dateOfBirth),
+                    'Parent': s.parentName,
+                    'Contact': s.contactNumber,
+                    'Email': s.email || '',
+                    'Address': s.address
+                }));
+                exportToCSV(exportData, 'all_students');
+            } else {
+                showToast('warning', 'No Data', 'No students to export');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Add New Student - Student Record Management System">
+    <title>Add Student — Student Records</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+</head>
+<body>
+    <div class="app-layout" id="app">
+        <div class="main-content" id="main-content">
+            <div class="page-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>➕ Add New Student</h2>
+                        <a href="/view-students.html" class="btn btn-sm btn-secondary">View All Students →</a>
+                    </div>
+
+                    <form id="add-student-form">
+                        <!-- Personal Information -->
+                        <h3 style="font-size: 15px; color: var(--accent-tertiary); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+                            👤 Personal Information
+                        </h3>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Student ID <span class="required">*</span></label>
+                                <input type="text" id="studentId" class="form-control" placeholder="e.g., STU-2026-001" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Student Name <span class="required">*</span></label>
+                                <input type="text" id="name" class="form-control" placeholder="Full name" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row-3">
+                            <div class="form-group">
+                                <label>Gender <span class="required">*</span></label>
+                                <select id="gender" class="form-control" required>
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Date of Birth <span class="required">*</span></label>
+                                <input type="date" id="dateOfBirth" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="email" class="form-control" placeholder="student@email.com">
+                            </div>
+                        </div>
+
+                        <!-- Academic Information -->
+                        <h3 style="font-size: 15px; color: var(--accent-tertiary); margin: 24px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+                            🎓 Academic Information
+                        </h3>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Class <span class="required">*</span></label>
+                                <select id="classId" class="form-control" required>
+                                    <option value="">Select Class</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Section <span class="required">*</span></label>
+                                <select id="sectionId" class="form-control" required>
+                                    <option value="">Select Section</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Subjects -->
+                        <div class="form-group">
+                            <label>Subjects</label>
+                            <div class="subject-tags" id="subject-tags"></div>
+                            <div class="subject-input-wrap">
+                                <input type="text" id="subject-input" class="form-control" placeholder="Type subject name and press Enter or click Add" style="flex: 1;">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="addSubject()">Add</button>
+                            </div>
+                        </div>
+
+                        <!-- Guardian Information -->
+                        <h3 style="font-size: 15px; color: var(--accent-tertiary); margin: 24px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+                            👨‍👩‍👧 Guardian Information
+                        </h3>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Parent/Guardian Name <span class="required">*</span></label>
+                                <input type="text" id="parentName" class="form-control" placeholder="Parent/Guardian full name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Contact Number <span class="required">*</span></label>
+                                <input type="tel" id="contactNumber" class="form-control" placeholder="+91 XXXXX XXXXX" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Address <span class="required">*</span></label>
+                            <textarea id="address" class="form-control" placeholder="Full address" required></textarea>
+                        </div>
+
+                        <!-- Marks Section -->
+                        <h3 style="font-size: 15px; color: var(--accent-tertiary); margin: 24px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+                            📝 Marks (Optional — Can be added later)
+                        </h3>
+
+                        <div id="marks-container"></div>
+
+                        <button type="button" class="btn btn-sm btn-secondary mt-8" onclick="addMarkRow()">
+                            ➕ Add Subject Mark
+                        </button>
+
+                        <!-- Submit -->
+                        <div style="margin-top: 32px; display: flex; gap: 12px; justify-content: flex-end;">
+                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('add-student-form').reset(); subjects = []; renderSubjects();">
+                                🔄 Reset
+                            </button>
+                            <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
+                                <span id="submit-text">💾 Save Student</span>
+                                <div class="spinner hidden" id="submit-spinner"></div>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        let subjects = [];
+        let markRowCount = 0;
+
+        (async () => {
+            document.getElementById('app').insertAdjacentHTML('afterbegin', getSidebarHTML());
+            document.getElementById('main-content').insertAdjacentHTML('afterbegin', getHeaderHTML('Add Student', 'Students > <span>Add New</span>'));
+
+            const user = await setupPage('add-student');
+            if (!user) return;
+
+            await loadClassesDropdown('classId');
+
+            // Load sections when class changes
+            document.getElementById('classId').addEventListener('change', (e) => {
+                loadSectionsDropdown('sectionId', e.target.value);
+            });
+
+            // Subject input enter key
+            document.getElementById('subject-input').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addSubject();
+                }
+            });
+        })();
+
+        function addSubject() {
+            const input = document.getElementById('subject-input');
+            const val = input.value.trim();
+            if (val && !subjects.includes(val)) {
+                subjects.push(val);
+                renderSubjects();
+                input.value = '';
+            }
+            input.focus();
+        }
+
+        function removeSubject(idx) {
+            subjects.splice(idx, 1);
+            renderSubjects();
+        }
+
+        function renderSubjects() {
+            const container = document.getElementById('subject-tags');
+            container.innerHTML = subjects.map((s, i) => `
+                <span class="subject-tag">
+                    ${s}
+                    <span class="remove-subject" onclick="removeSubject(${i})">✕</span>
+                </span>
+            `).join('');
+        }
+
+        function addMarkRow() {
+            markRowCount++;
+            const container = document.getElementById('marks-container');
+            const row = document.createElement('div');
+            row.className = 'marks-entry-row';
+            row.id = `mark-row-${markRowCount}`;
+            row.innerHTML = `
+                <input type="text" class="form-control mark-subject" placeholder="Subject">
+                <input type="number" class="form-control mark-obtained" placeholder="Marks" min="0" max="100">
+                <input type="number" class="form-control mark-max" placeholder="Max" value="100" min="1">
+                <select class="form-control mark-exam">
+                    <option value="Final">Final</option>
+                    <option value="Midterm">Midterm</option>
+                    <option value="Quiz">Quiz</option>
+                    <option value="Assignment">Assignment</option>
+                    <option value="Practical">Practical</option>
+                </select>
+                <button type="button" class="btn btn-icon btn-danger" onclick="this.parentElement.remove()">✕</button>
+            `;
+            container.appendChild(row);
+        }
+
+        // Form submit
+        document.getElementById('add-student-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submit-btn');
+            const submitText = document.getElementById('submit-text');
+            const submitSpinner = document.getElementById('submit-spinner');
+
+            submitBtn.disabled = true;
+            submitText.textContent = 'Saving...';
+            submitSpinner.classList.remove('hidden');
+
+            // Collect marks
+            const markRows = document.querySelectorAll('.marks-entry-row');
+            const marks = [];
+            markRows.forEach(row => {
+                const subject = row.querySelector('.mark-subject').value.trim();
+                const obtained = parseFloat(row.querySelector('.mark-obtained').value);
+                const max = parseFloat(row.querySelector('.mark-max').value) || 100;
+                const examType = row.querySelector('.mark-exam').value;
+                if (subject && !isNaN(obtained)) {
+                    marks.push({ subject, marksObtained: obtained, maxMarks: max, examType });
+                }
+            });
+
+            const studentData = {
+                studentId: document.getElementById('studentId').value.trim(),
+                name: document.getElementById('name').value.trim(),
+                classId: document.getElementById('classId').value,
+                sectionId: document.getElementById('sectionId').value,
+                gender: document.getElementById('gender').value,
+                dateOfBirth: document.getElementById('dateOfBirth').value,
+                parentName: document.getElementById('parentName').value.trim(),
+                contactNumber: document.getElementById('contactNumber').value.trim(),
+                address: document.getElementById('address').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                subjects,
+                marks
+            };
+
+            try {
+                const data = await apiRequest('/students', {
+                    method: 'POST',
+                    body: studentData
+                });
+
+                if (data && data.success) {
+                    showToast('success', 'Student Added!', `${studentData.name} has been registered successfully`);
+                    setTimeout(() => {
+                        window.location.href = '/view-students.html';
+                    }, 1500);
+                } else {
+                    showToast('error', 'Failed', data?.message || 'Could not add student');
+                    submitBtn.disabled = false;
+                    submitText.textContent = '💾 Save Student';
+                    submitSpinner.classList.add('hidden');
+                }
+            } catch {
+                submitBtn.disabled = false;
+                submitText.textContent = '💾 Save Student';
+                submitSpinner.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
